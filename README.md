@@ -1,2 +1,2 @@
 # Pressure-Injury-ML-prediction-code
-Codes related to prediction of pressure injury with ML models
+Early prediction of pressure injury risk in hospitalized patients using supervised machine learning models (Random Forest, XGBoost, SVM, Logistic Regression, Decision Tree). Models are trained on basic nursing records collected within the first 8 hours of admission, achieving AUC 82.4% and adjusted precision 93.3%. Includes data preprocessing, feature selection, hyperparameter tuning, and clinical interpretation of results. Dataset: 446 patients from Félix Bulnes Hospital, Santiago, Chile (2022). Published in Scientific Reports (2026).
