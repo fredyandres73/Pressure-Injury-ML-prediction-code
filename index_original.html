@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riesgo de LPP</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10); --wash: rgba(11,11,11,0.04);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --critical: #d03b3b; --pista: #e6e5df;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --pista: #353532;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --pista: #353532;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.contenedor { max-width: 1180px; margin: 0 auto; padding: 20px 16px 40px; }
+h1 { font-size: 22px; margin: 0; font-weight: 600; }
+.cabecera { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
+.sub { margin: 2px 0 0; color: var(--ink-2); }
+.sub span + span { margin-left: 1.5em; }
+.pie { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--ink-2); }
+.pie p { margin: 4px 0; }
+.pie a { color: inherit; }
+.rotulo { font-size: 12px; color: var(--ink-2); }
+.tarjeta { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+
+.controles { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; margin-bottom: 12px; }
+.control { display: flex; align-items: center; gap: 10px; }
+#control-modelo, #control-modelo .rotulo { font-size: 13px; line-height: 1.3; }
+.modelo-unico { color: var(--ink); }
+.umbral input { width: 180px; accent-color: var(--s1); }
+.tarjeta.umbral { padding: 12px 16px; }
+.tarjeta.umbral input { flex: 1; width: auto; min-width: 0; }
+.umbral output { min-width: 3.5em; font-weight: 600; font-variant-numeric: tabular-nums; }
+.segmentado { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; padding: 2px; background: var(--surface); }
+.segmentado button { border: 0; background: none; color: var(--ink-2); font: inherit; padding: 4px 10px; border-radius: 6px; cursor: pointer; line-height: 1.2; }
+.segmentado button:hover { background: var(--wash); }
+.segmentado button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.segmentado button small { display: block; font-size: 10.5px; opacity: .75; font-variant-numeric: tabular-nums; }
+.boton { border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.boton:hover { background: var(--wash); }
+.boton[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+
+.pestanas { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; overflow-x: auto; overflow-y: hidden; }
+.pestanas a { color: var(--ink-2); text-decoration: none; padding: 8px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.pestanas a:hover { color: var(--ink); }
+.pestanas a[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+a.enlace { text-decoration: none; display: inline-flex; align-items: center; align-self: center; color: var(--ink); font-size: 15px; font-weight: 600; padding: 9px 18px; border-radius: 10px; }
+
+.paciente { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+.columna-resultado { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 12px; }
+#puntos { margin-top: 14px; }
+fieldset { border: 0; margin: 0 0 14px; padding: 0; }
+fieldset:last-child { margin-bottom: 0; }
+legend { font-weight: 600; padding: 0; margin-bottom: 8px; }
+.campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 16px; }
+.campo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.campo[hidden] { display: none; }
+.campo select, .campo input { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; width: 100%; min-width: 0; }
+.campo .segmentado { align-self: flex-start; }
+
+.hero { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+#prob { font-size: 52px; font-weight: 600; line-height: 1.05; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 600; }
+.chip .icono { color: var(--muted); }
+.chip.alerta .icono { color: var(--critical); }
+.titulo-vista { font-size: 13px; font-weight: 600; margin: 18px 0 4px; }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.kpi .valor { font-size: 28px; font-weight: 600; line-height: 1.2; }
+.kpi .detalle { font-size: 12px; color: var(--muted); }
+.graficos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+figure { margin: 0; }
+figcaption { font-weight: 600; margin-bottom: 4px; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.leyenda span::before { content: ""; display: inline-block; width: 14px; height: 2px; border-radius: 1px; background: var(--c); vertical-align: middle; margin-right: 6px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg .grid { stroke: var(--grid); stroke-width: 1; }
+svg .eje { stroke: var(--axis); stroke-width: 1; }
+svg .linea { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+svg .marcador { stroke: var(--surface); stroke-width: 2; }
+svg .cursor { stroke: var(--ink-2); stroke-width: 1; }
+svg .rotulo-dato { fill: var(--ink-2); font-size: 11px; }
+svg .rotulo-fila { fill: var(--ink-2); font-size: 12px; }
+svg .valor-fila { fill: var(--ink); font-size: 12px; font-weight: 600; }
+
+.leyenda.barras span::before { width: 10px; height: 10px; border-radius: 2px; }
+.nota { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.selector-figura { margin: 4px 0 10px; }
+
+.tooltip { position: fixed; z-index: 10; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.tooltip .fila { display: flex; align-items: center; gap: 8px; }
+.tooltip .fila i { width: 12px; height: 2px; border-radius: 1px; background: var(--c); }
+.tooltip b { font-variant-numeric: tabular-nums; }
+.tooltip .tenue { color: var(--ink-2); }
+
+@media (max-width: 900px) {
+  .paciente, .graficos { grid-template-columns: minmax(0, 1fr); }
+  .columna-resultado { position: static; order: -1; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <header class="cabecera">
+    <div>
+      <h1>Riesgo de lesión por presión</h1>
+      <p class="sub" id="sub"></p>
+    </div>
+    <a class="boton enlace" id="ir-detalles" href="#datos">Datos y desempeño del modelo →</a>
+    <a class="boton enlace" id="volver" href="#" hidden>← Volver a la predicción</a>
+  </header>
+
+  <section class="controles">
+    <div class="control" id="control-modelo">
+      <span class="rotulo">Modelo</span>
+      <div class="segmentado" id="selector-modelo"></div>
+    </div>
+  </section>
+
+  <main>
+    <!-- Vista principal: la predicción para un paciente -->
+    <section id="vista-prediccion">
+      <div class="paciente">
+        <form id="formulario" class="tarjeta" autocomplete="off"></form>
+        <div class="columna-resultado">
+          <aside class="tarjeta resultado">
+            <div class="hero"><span id="prob"></span><span id="chip" class="chip"></span></div>
+            <div class="rotulo">Probabilidad de LPP</div>
+            <h3 class="titulo-vista" id="titulo-modelos">Los cuatro modelos</h3>
+            <svg id="puntos"></svg>
+          </aside>
+          <div class="tarjeta control umbral" data-umbral></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Vista secundaria: detalle del dataset, del desempeño y de las figuras del paper -->
+    <section id="vista-detalles" hidden>
+    <nav class="pestanas" role="tablist">
+      <a role="tab" href="#datos">Datos</a>
+      <a role="tab" href="#desempeno">Desempeño del modelo</a>
+      <a role="tab" href="#resultados">Resultados del estudio</a>
+    </nav>
+
+    <section id="p-desempeno" class="panel" hidden>
+      <div class="controles"><div class="control umbral" data-umbral></div></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="graficos">
+        <figure class="tarjeta">
+          <figcaption>Curva ROC</figcaption>
+          <div class="leyenda"><span style="--c: var(--s1)" id="leyenda-ml"></span><span style="--c: var(--s2)">Braden</span></div>
+          <svg id="roc"></svg>
+        </figure>
+        <figure class="tarjeta">
+          <figcaption>Métricas según umbral</figcaption>
+          <div class="leyenda"><span style="--c: var(--s1)">Sensibilidad</span><span style="--c: var(--s2)">Especificidad</span></div>
+          <svg id="curvas"></svg>
+        </figure>
+      </div>
+    </section>
+
+    <section id="p-figuras" class="panel" hidden>
+      <div class="graficos">
+        <figure class="tarjeta">
+          <figcaption>Importancia de las variables</figcaption>
+          <div class="segmentado selector-figura" id="modelo-importancia">
+            <button type="button" data-m="RF" aria-pressed="true">Random forest</button>
+            <button type="button" data-m="DT" aria-pressed="false">Árbol de decisión</button>
+          </div>
+          <svg id="fig-importancia"></svg>
+        </figure>
+        <figure class="tarjeta">
+          <figcaption>Riesgo predicho según tipo de incontinencia</figcaption>
+          <svg id="fig-incontinencia"></svg>
+        </figure>
+        <figure class="tarjeta">
+          <figcaption>Riesgo predicho según servicio</figcaption>
+          <svg id="fig-servicio"></svg>
+        </figure>
+      </div>
+    </section>
+
+    <section id="p-datos" class="panel" hidden>
+      <div class="kpis" id="kpis-datos"></div>
+      <div class="graficos">
+        <figure class="tarjeta">
+          <figcaption>Pacientes por servicio</figcaption>
+          <div class="leyenda barras"><span style="--c: var(--s2)">Con LPP</span><span style="--c: var(--pista)">Sin LPP</span></div>
+          <svg id="datos-servicio"></svg>
+        </figure>
+        <figure class="tarjeta">
+          <figcaption>Puntaje Braden</figcaption>
+          <div class="leyenda barras"><span style="--c: var(--s1)">Sin LPP</span><span style="--c: var(--s2)">Con LPP</span></div>
+          <svg id="datos-braden"></svg>
+          <div class="nota">% de pacientes de cada grupo</div>
+        </figure>
+        <figure class="tarjeta">
+          <figcaption>LPP según factores clínicos</figcaption>
+          <div class="leyenda barras"><span style="--c: var(--s2)">Sí</span><span style="--c: var(--s1)">No</span></div>
+          <svg id="datos-factores"></svg>
+          <div class="nota">% de pacientes con LPP</div>
+        </figure>
+        <figure class="tarjeta">
+          <figcaption>LPP según riesgo-dependencia (CUDYR)</figcaption>
+          <svg id="datos-cudyr"></svg>
+          <div class="nota">% de pacientes con LPP</div>
+        </figure>
+        <figure class="tarjeta">
+          <figcaption>Edad</figcaption>
+          <div class="leyenda barras"><span style="--c: var(--s1)">Sin LPP</span><span style="--c: var(--s2)">Con LPP</span></div>
+          <svg id="datos-edad"></svg>
+          <div class="nota">% de pacientes de cada grupo</div>
+        </figure>
+        <figure class="tarjeta">
+          <figcaption>LPP según tipo de incontinencia</figcaption>
+          <svg id="datos-incontinencia"></svg>
+          <div class="nota">% de pacientes con LPP</div>
+        </figure>
+      </div>
+    </section>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p>Barriga-Gallegos F, Ríos-Vásquez G, Morgado Tapia G, Almarza Garrido C, Febré Vergara N. Early prediction of pressure
+       injury risk in hospitalized patients using supervised machine learning models based on nursing records.
+       <i>Scientific Reports</i>. 2026;16:6502.
+       <a href="https://doi.org/10.1038/s41598-026-35709-w" target="_blank" rel="noopener">doi:10.1038/s41598-026-35709-w</a></p>
+    <p>Esta página no está validada para tomar decisiones clínicas.</p>
+  </footer>
+</div>
+<div id="tooltip" class="tooltip" hidden></div>
+
+<script src="modelo_lpp.js"></script>
+<script>
+const M = MODELO;
+const ORDEN   = Object.keys(M.modelos);
+const NOMBRES = {LR: 'Regresión logística', DT: 'Árbol de decisión', RF: 'Random forest', XGB: 'XGBoost'};
+const P = M.eventos, N = M.n - M.eventos;
+
+// Las 13 variables del modelo (Código_Braden_ML.py); Sexo solo se usa para imputar peso y talla
+const INCONTINENCIA = 'Incontinence', TIPO = 'Incontinence type', SIN_INCONTINENCIA = 'No incontinence';
+const ETIQUETAS = {
+  'Service': 'Servicio clínico', 'Gender': 'Sexo', 'Weight': 'Peso (kg)', 'Height': 'Talla (cm)',
+  'Total Braden': 'Puntaje Braden', 'Dependency risk': 'Riesgo-dependencia (CUDYR)',
+  'Mattres': 'Colchón antiescaras', 'Position': 'Indicación de cambio de posición',
+  'Restraint': 'Contención física', 'Incontinence': 'Incontinencia', 'Incontinence type': 'Tipo de incontinencia',
+  'Skin lesions': 'Lesiones por adhesivos médicos', 'Invasive devices': 'Dispositivos médicos invasivos',
+  'Pre-hospital LPP': 'LPP comunitaria',
+  // Variables del dataset que no entran al modelo (pestañas Figuras y Datos)
+  'Age': 'Edad (años)', 'Skin treatment': 'Plan de cuidados de piel', 'Nutrition': 'Plan de manejo nutricional',
+  'Neuromuscular': 'Bloqueadores neuromusculares', 'Mobility': 'Tracción u otro dispositivo que impide movilidad',
+  'Medical devices': 'Dispositivos médicos no invasivos', 'Recent surgery': 'Cirugía reciente'};
+
+const GRUPOS = [
+  ['Paciente',            ['Service', 'Gender', 'Weight', 'Height']],
+  ['Evaluación',          ['Total Braden', 'Dependency risk']],
+  ['Medidas preventivas', ['Mattres', 'Position']],
+  ['Condiciones',         ['Incontinence', 'Incontinence type', 'Restraint', 'Skin lesions', 'Invasive devices', 'Pre-hospital LPP']]];
+
+// Entrada por defecto: primer nivel ("No") en las variables binarias
+const entrada = {};
+for (const v in M.categoricas) entrada[v] = M.categoricas[v][0];
+Object.assign(entrada, {'Service': 'Unidad Medico quirúrgico adulto', 'Gender': 'Femenino',
+  'Dependency risk': M.categoricas['Dependency risk'].find(n => n.startsWith('B1')),
+  [TIPO]: SIN_INCONTINENCIA, 'Weight': null, 'Height': null, 'Total Braden': 15});
+
+const UMBRAL_PAPER = 50;   // umbral por defecto del paper (Ec. 10), con el que se calcula la Tabla 4
+const estado = {modelo: ORDEN.includes('RF') ? 'RF' : ORDEN[0], umbral: UMBRAL_PAPER, importancia: 'RF'};
+
+// ---------------------------------------------------------------- Motor de predicción
+function vectorEntrada(e) {
+  const num = {};
+  for (const v of M.numericas) {
+    let val = e[v];
+    if ((val === null || val === '' || Number.isNaN(val)) && M.imputacion[v]) {
+      const g = M.imputacion[v].grupos[M.imputacion.por.map(k => e[k]).join('|')];
+      val = g !== undefined ? g : M.imputacion[v].global;
+    }
+    num[v] = val === null || val === '' ? NaN : Number(val);   // sin imputación (Braden) queda vacío
+  }
+  return M.vector.map(c => {
+    if (c.nivel === undefined) {
+      const k = M.numericas.indexOf(c.var);
+      return (num[c.var] - M.escala.media[k]) / M.escala.desv[k];
+    }
+    return e[c.var] === c.nivel ? 1 : 0;
+  });
+}
+
+function probabilidad(nombre, x) {
+  const m = M.modelos[nombre];
+  if (m.tipo === 'lineal') {
+    let z = m.b0;
+    for (let i = 0; i < x.length; i++) z += m.w[i] * x[i];
+    return 1 / (1 + Math.exp(-z));
+  }
+  const xf = x.map(Math.fround);   // los árboles comparan en precisión simple
+  let s = 0;
+  for (const a of m.arboles) {
+    let n = 0;
+    while (a.f[n] >= 0) {
+      const izquierda = m.regla === '<' ? xf[a.f[n]] < Math.fround(a.t[n]) : xf[a.f[n]] <= a.t[n];
+      n = izquierda ? a.l[n] : a.r[n];
+    }
+    s += a.p[n];
+  }
+  return m.tipo === 'bosque' ? s / m.arboles.length : 1 / (1 + Math.exp(-(m.base + s)));
+}
+
+// Métricas fuera de muestra en el índice i de la grilla de umbrales
+function metricas(tp, fp) {
+  return {sens: tp / P, espec: (N - fp) / N, prec: tp + fp > 0 ? tp / (tp + fp) : 0,
+          exact: (tp + N - fp) / M.n, alertas: (tp + fp) / M.n * 100, tp, fp};
+}
+const indiceUmbral = pct => Math.round(pct / 100 * (M.umbrales_ml.length - 1));
+
+// ---------------------------------------------------------------- Utilidades
+const NS = 'http://www.w3.org/2000/svg';
+function s(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.append(e);
+  return e;
+}
+function h(tag, attrs, ...hijos) {
+  const e = document.createElement(tag);
+  for (const k in attrs || {}) e.setAttribute(k, attrs[k]);
+  for (const c of hijos) e.append(c);
+  return e;
+}
+const pct = (v, d = 0) => (v * 100).toLocaleString('es-CL', {minimumFractionDigits: d, maximumFractionDigits: d}) + ' %';
+const dec = (v, d = 2) => v.toLocaleString('es-CL', {minimumFractionDigits: d, maximumFractionDigits: d});
+const nivelTexto = n => ({SI: 'Sí', Si: 'Sí', NO: 'No'}[n] || n);
+const cudyrTexto = n => n.replace(/[;.]\s*$/, '').replace(/\s*=\s*/, ' · ');
+
+const tooltip = document.getElementById('tooltip');
+function mostrarTooltip(ev, filas) {
+  tooltip.replaceChildren();
+  for (const f of filas) {
+    const fila = h('div', {class: 'fila'});
+    if (f.color) { const i = h('i'); i.style.setProperty('--c', f.color); fila.append(i); }
+    fila.append(h('b', {}, f.valor), h('span', {class: 'tenue'}, f.rotulo));
+    tooltip.append(fila);
+  }
+  tooltip.hidden = false;
+  const r = tooltip.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 14;
+  tooltip.style.left = x + 'px'; tooltip.style.top = y + 'px';
+}
+const ocultarTooltip = () => { tooltip.hidden = true; };
+function puntoSVG(svg, ev) {
+  const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+function ejes(g, x, y, ticks, ancho, alto, m) {
+  for (const v of ticks) {
+    s('line', {class: 'grid', x1: m.l, x2: m.l + ancho, y1: y(v), y2: y(v)}, g);
+    s('text', {x: m.l - 6, y: y(v) + 4, 'text-anchor': 'end'}, g).textContent = Math.round(v * 100);
+    s('text', {x: x(v), y: m.t + alto + 16, 'text-anchor': 'middle'}, g).textContent = Math.round(v * 100);
+  }
+  s('line', {class: 'eje', x1: m.l, x2: m.l + ancho, y1: y(0), y2: y(0)}, g);
+}
+const color = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+// Se dibuja al ancho real en píxeles para que el texto no se escale; en paneles ocultos se usa el valor por defecto
+const anchoSVG = (svg, porDefecto) => Math.round(svg.parentNode.clientWidth - 32) > 200 ? Math.round(svg.parentNode.clientWidth - 32) : porDefecto;
+
+// ---------------------------------------------------------------- Formulario
+function crearFormulario() {
+  const form = document.getElementById('formulario');
+  for (const [titulo, vars] of GRUPOS) {
+    const fs = h('fieldset', {}, h('legend', {}, titulo));
+    const campos = h('div', {class: 'campos'});
+    for (const v of vars) campos.append(campo(v));
+    fs.append(campos);
+    form.append(fs);
+  }
+  form.addEventListener('submit', ev => ev.preventDefault());
+}
+
+// Puntajes válidos: Braden adulto de 6 a 23; Braden Q (unidades pediátricas y neonatales) de 7 a 28
+const BRADEN = 'Total Braden';
+const escalaPediatrica = () => /pedi|neonat/i.test(entrada['Service']);
+function opcionesBraden() {
+  const sel = document.getElementById('c-Total-Braden');
+  const [desde, hasta] = escalaPediatrica() ? [7, 28] : [6, 23];
+  entrada[BRADEN] = Math.min(hasta, Math.max(desde, entrada[BRADEN]));
+  sel.replaceChildren(...Array.from({length: hasta - desde + 1}, (_, i) => h('option', {value: String(desde + i)}, String(desde + i))));
+  sel.value = String(entrada[BRADEN]);
+  document.querySelector(`label[for="c-Total-Braden"]`).textContent = escalaPediatrica() ? 'Puntaje Braden Q' : 'Puntaje Braden';
+}
+
+function campo(v) {
+  const id = 'c-' + v.replace(/\W+/g, '-');
+  const div = h('div', {class: 'campo', 'data-var': v});
+  if (v === BRADEN) {
+    const sel = h('select', {id});
+    sel.addEventListener('change', () => { entrada[v] = Number(sel.value); actualizar(); });
+    div.append(h('label', {class: 'rotulo', for: id}, ETIQUETAS[v]), sel);
+    return div;
+  }
+  if (M.numericas.includes(v)) {
+    const inp = h('input', {id, type: 'number', min: '0', step: 'any', inputmode: 'decimal'});
+    if (entrada[v] !== null) inp.value = entrada[v];
+    if (M.imputacion[v]) inp.placeholder = 'Sin registro';
+    inp.addEventListener('input', () => { entrada[v] = inp.value === '' ? null : Number(inp.value); actualizar(); });
+    div.append(h('label', {class: 'rotulo', for: id}, ETIQUETAS[v]), inp);
+    return div;
+  }
+  let niveles = M.categoricas[v];
+  if (v === TIPO) niveles = niveles.filter(n => n !== SIN_INCONTINENCIA);
+  if (niveles.length === 2) {
+    const seg = h('div', {class: 'segmentado', role: 'group', 'aria-label': ETIQUETAS[v]});
+    for (const n of niveles) {
+      const b = h('button', {type: 'button', 'aria-pressed': String(entrada[v] === n)}, nivelTexto(n));
+      b.addEventListener('click', () => {
+        entrada[v] = n;
+        seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+        if (v === INCONTINENCIA) sincronizarIncontinencia();
+        actualizar();
+      });
+      seg.append(b);
+    }
+    div.append(h('span', {class: 'rotulo'}, ETIQUETAS[v]), seg);
+    return div;
+  }
+  const sel = h('select', {id});
+  for (const n of niveles) {
+    const o = h('option', {value: n}, v === 'Dependency risk' ? cudyrTexto(n) : n);
+    if (entrada[v] === n) o.selected = true;
+    sel.append(o);
+  }
+  sel.addEventListener('change', () => {
+    entrada[v] = sel.value;
+    if (v === 'Service') opcionesBraden();
+    actualizar();
+  });
+  div.append(h('label', {class: 'rotulo', for: id}, ETIQUETAS[v]), sel);
+  return div;
+}
+
+function sincronizarIncontinencia() {
+  const si = entrada[INCONTINENCIA] !== M.categoricas[INCONTINENCIA][0];
+  const div = document.querySelector(`[data-var="${TIPO}"]`);
+  const sel = div.querySelector('select');
+  div.hidden = !si;
+  if (!si) entrada[TIPO] = SIN_INCONTINENCIA;
+  else if (entrada[TIPO] === SIN_INCONTINENCIA) entrada[TIPO] = 'Mixta';
+  if (si) sel.value = entrada[TIPO];
+}
+
+// ---------------------------------------------------------------- Vistas
+function actualizarPaciente() {
+  const x = vectorEntrada(entrada);
+  const chip = document.getElementById('chip');
+  if (x.some(Number.isNaN)) {
+    document.getElementById('prob').textContent = '—';
+    chip.className = 'chip';
+    chip.replaceChildren(h('span', {class: 'icono', 'aria-hidden': 'true'}, '●'), 'Falta el puntaje Braden');
+    document.getElementById('puntos').replaceChildren();
+    return;
+  }
+  const probs = Object.fromEntries(ORDEN.map(n => [n, probabilidad(n, x)]));
+  const u = M.umbrales_ml[indiceUmbral(estado.umbral)];
+  const p = probs[estado.modelo];
+  document.getElementById('prob').textContent = pct(p);
+  chip.className = 'chip' + (p >= u ? ' alerta' : '');
+  chip.replaceChildren(h('span', {class: 'icono', 'aria-hidden': 'true'}, p >= u ? '▲' : '●'), p >= u ? 'Alerta' : 'Sin alerta');
+
+  // Barra de riesgo: relleno hasta la probabilidad y zona de alerta desde el umbral
+  const svg = document.getElementById('puntos');
+  const filas = ORDEN.length, varios = filas > 1;
+  const W = anchoSVG(svg, 346), fila = 30, m = {l: varios ? 118 : 8, r: varios ? 46 : 8, t: 22, b: 20};
+  const ancho = W - m.l - m.r, H = m.t + fila * filas + m.b;
+  const x0 = v => m.l + v * ancho;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.replaceChildren();
+  const defs = s('defs', {}, svg);
+  s('text', {class: 'rotulo-dato', x: Math.min(Math.max(x0(u), m.l + 36), m.l + ancho - 36), y: 12, 'text-anchor': 'middle'}, svg).textContent = 'Umbral ' + pct(u);
+  for (const v of [0, .25, .5, .75, 1]) {
+    s('text', {x: x0(v), y: H - 4, 'text-anchor': v === 0 ? 'start' : v === 1 ? 'end' : 'middle'}, svg).textContent = Math.round(v * 100) + (v === 1 ? ' %' : '');
+  }
+  ORDEN.forEach((n, k) => {
+    const cy = m.t + fila * k + fila / 2;
+    const activo = n === estado.modelo;
+    const clip = s('clipPath', {id: 'pista-' + k}, defs);
+    s('rect', {x: m.l, y: cy - 5, width: ancho, height: 10, rx: 5}, clip);
+    s('rect', {x: m.l, y: cy - 5, width: ancho, height: 10, rx: 5, fill: color('--pista')}, svg);
+    s('rect', {x: x0(u), y: cy - 5, width: m.l + ancho - x0(u), height: 10, fill: color('--critical'), 'fill-opacity': .22, 'clip-path': `url(#pista-${k})`}, svg);
+    s('rect', {x: m.l, y: cy - 5, width: probs[n] * ancho, height: 10, fill: activo ? color('--s1') : color('--muted'), 'clip-path': `url(#pista-${k})`}, svg);
+    s('line', {x1: x0(u), x2: x0(u), y1: cy - 10, y2: cy + 10, stroke: color('--ink-2'), 'stroke-width': 2, 'stroke-linecap': 'round'}, svg);
+    s('circle', {class: 'marcador', cx: x0(probs[n]), cy, r: 7, fill: activo ? color('--s1') : color('--muted')}, svg);
+    if (varios) {
+      s('text', {class: 'rotulo-fila', x: 0, y: cy + 4}, svg).textContent = NOMBRES[n];
+      s('text', {class: 'valor-fila', x: W, y: cy + 4, 'text-anchor': 'end'}, svg).textContent = pct(probs[n]);
+    }
+    const hit = s('rect', {x: 0, y: cy - fila / 2, width: W, height: fila, fill: 'transparent'}, svg);
+    hit.addEventListener('pointermove', ev => mostrarTooltip(ev, [{valor: pct(probs[n], 1), rotulo: NOMBRES[n]}, {valor: pct(u), rotulo: 'umbral'}]));
+    hit.addEventListener('pointerleave', ocultarTooltip);
+    hit.addEventListener('click', () => elegirModelo(n));
+  });
+}
+
+function actualizarDesempeno() {
+  const d = M.desempeno[estado.modelo];
+  const i = indiceUmbral(estado.umbral);
+  const r = metricas(d.tp[i], d.fp[i]);
+  const kpis = [['Sensibilidad', pct(r.sens, 1), `${r.tp} de ${P} casos`],
+                ['Especificidad', pct(r.espec, 1), `${N - r.fp} de ${N} sin LPP`],
+                ['Precisión', r.tp + r.fp ? pct(r.prec, 1) : '—', `${r.tp} de ${r.tp + r.fp} alertas`],
+                ['Alertas por 100 pacientes', dec(r.alertas, 1), `AUC ${dec(d.auc, 3)}`]];
+  document.getElementById('kpis').replaceChildren(...kpis.map(([t, v, det]) =>
+    h('div', {class: 'tarjeta kpi'}, h('div', {class: 'rotulo'}, t), h('div', {class: 'valor'}, v), h('div', {class: 'detalle'}, det))));
+  document.getElementById('leyenda-ml').textContent = NOMBRES[estado.modelo];
+  dibujarROC(d, i);
+  dibujarCurvas(d, i);
+}
+
+function dibujarROC(d, iActual) {
+  const svg = document.getElementById('roc');
+  const W = anchoSVG(svg, 500), H = Math.min(W, 420), m = {l: 40, r: 14, t: 8, b: 44}, ancho = W - m.l - m.r, alto = H - m.t - m.b;
+  const x = v => m.l + v * ancho, y = v => m.t + (1 - v) * alto;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.replaceChildren();
+  ejes(svg, x, y, [0, .25, .5, .75, 1], ancho, alto, m);
+  s('text', {x: m.l + ancho / 2, y: H - 6, 'text-anchor': 'middle'}, svg).textContent = '1 − Especificidad (%)';
+  s('text', {x: -(m.t + alto / 2), y: 11, transform: 'rotate(-90)', 'text-anchor': 'middle'}, svg).textContent = 'Sensibilidad (%)';
+  s('line', {class: 'eje', x1: x(0), y1: y(0), x2: x(1), y2: y(1)}, svg);
+
+  const pts = [];
+  for (let i = d.tp.length - 1; i >= 0; i--) pts.push([d.fp[i] / N, d.tp[i] / P, i]);
+  s('path', {class: 'linea', stroke: color('--s1'), d: 'M' + x(0) + ',' + y(0) + pts.map(p => 'L' + x(p[0]) + ',' + y(p[1])).join('')}, svg);
+  const b = M.braden;
+  s('path', {class: 'linea', stroke: color('--s2'), d: 'M' + x(0) + ',' + y(0) + b.cortes.map((c, k) => 'L' + x(b.fp[k] / N) + ',' + y(b.tp[k] / P)).join('') + 'L' + x(1) + ',' + y(1)}, svg);
+
+  const hover = s('circle', {class: 'marcador', r: 5, fill: color('--s1'), visibility: 'hidden'}, svg);
+  const capa = s('rect', {x: m.l, y: m.t, width: ancho, height: alto, fill: 'transparent', style: 'cursor: crosshair'}, svg);
+  const cercano = ev => {
+    const q = puntoSVG(svg, ev);
+    let mejor = pts[0], dist = Infinity;
+    for (const p of pts) { const dd = (x(p[0]) - q.x) ** 2 + (y(p[1]) - q.y) ** 2; if (dd < dist) { dist = dd; mejor = p; } }
+    return mejor;
+  };
+  capa.addEventListener('pointermove', ev => {
+    const p = cercano(ev);
+    hover.setAttribute('cx', x(p[0])); hover.setAttribute('cy', y(p[1])); hover.setAttribute('visibility', 'visible');
+    mostrarTooltip(ev, [{valor: pct(M.umbrales_ml[p[2]], 1), rotulo: 'umbral'},
+                        {valor: pct(p[1], 1), rotulo: 'sensibilidad', color: color('--s1')},
+                        {valor: pct(1 - p[0], 1), rotulo: 'especificidad'}]);
+  });
+  capa.addEventListener('pointerleave', () => { hover.setAttribute('visibility', 'hidden'); ocultarTooltip(); });
+  capa.addEventListener('click', ev => fijarUmbral(Math.round(M.umbrales_ml[cercano(ev)[2]] * 100)));
+
+  for (const u of b.umbrales) {
+    const k = b.cortes.indexOf(u), fx = b.fp[k] / N, ty = b.tp[k] / P;
+    s('circle', {class: 'marcador', cx: x(fx), cy: y(ty), r: 4.5, fill: color('--s2')}, svg);
+    s('text', {class: 'rotulo-dato', x: x(fx) + 7, y: y(ty) + 13}, svg).textContent = '<' + u;
+    const hit = s('circle', {cx: x(fx), cy: y(ty), r: 12, fill: 'transparent'}, svg);
+    hit.addEventListener('pointermove', ev => mostrarTooltip(ev, [{valor: 'Braden < ' + u, rotulo: ''},
+      {valor: pct(ty, 1), rotulo: 'sensibilidad', color: color('--s2')}, {valor: pct(1 - fx, 1), rotulo: 'especificidad'}]));
+    hit.addEventListener('pointerleave', ocultarTooltip);
+  }
+  s('circle', {class: 'marcador', cx: x(d.fp[iActual] / N), cy: y(d.tp[iActual] / P), r: 6, fill: color('--s1'), 'pointer-events': 'none'}, svg);
+}
+
+function dibujarCurvas(d, iActual) {
+  const svg = document.getElementById('curvas');
+  const W = anchoSVG(svg, 500), H = Math.min(W, 420), m = {l: 40, r: 14, t: 8, b: 44}, ancho = W - m.l - m.r, alto = H - m.t - m.b;
+  const x = v => m.l + v * ancho, y = v => m.t + (1 - v) * alto;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.replaceChildren();
+  ejes(svg, x, y, [0, .25, .5, .75, 1], ancho, alto, m);
+  s('text', {x: m.l + ancho / 2, y: H - 6, 'text-anchor': 'middle'}, svg).textContent = 'Umbral (%)';
+  const us = M.umbrales_ml;
+  const series = [['sens', '--s1', 'sensibilidad'], ['espec', '--s2', 'especificidad']];
+  const valores = us.map((u, i) => metricas(d.tp[i], d.fp[i]));
+  for (const [k, c] of series) {
+    s('path', {class: 'linea', stroke: color(c), d: valores.map((r, i) => (i ? 'L' : 'M') + x(us[i]) + ',' + y(r[k])).join('')}, svg);
+  }
+  s('line', {class: 'cursor', x1: x(us[iActual]), x2: x(us[iActual]), y1: m.t, y2: m.t + alto}, svg);
+
+  const guia = s('line', {class: 'cursor', y1: m.t, y2: m.t + alto, visibility: 'hidden', 'stroke-dasharray': '0'}, svg);
+  const puntos = series.map(([, c]) => s('circle', {class: 'marcador', r: 4, fill: color(c), visibility: 'hidden'}, svg));
+  const capa = s('rect', {x: m.l, y: m.t, width: ancho, height: alto, fill: 'transparent', style: 'cursor: crosshair'}, svg);
+  const indice = ev => Math.max(0, Math.min(us.length - 1, Math.round((puntoSVG(svg, ev).x - m.l) / ancho * (us.length - 1))));
+  capa.addEventListener('pointermove', ev => {
+    const i = indice(ev), r = valores[i];
+    guia.setAttribute('x1', x(us[i])); guia.setAttribute('x2', x(us[i])); guia.setAttribute('visibility', 'visible');
+    series.forEach(([k], j) => {
+      puntos[j].setAttribute('cx', x(us[i])); puntos[j].setAttribute('cy', y(r[k])); puntos[j].setAttribute('visibility', 'visible');
+    });
+    mostrarTooltip(ev, [{valor: pct(us[i], 1), rotulo: 'umbral'},
+      ...series.map(([k, c, t]) => ({valor: pct(r[k], 1), rotulo: t, color: color(c)}))]);
+  });
+  capa.addEventListener('pointerleave', () => { guia.setAttribute('visibility', 'hidden'); puntos.forEach(p => p.setAttribute('visibility', 'hidden')); ocultarTooltip(); });
+  capa.addEventListener('click', ev => fijarUmbral(Math.round(us[indice(ev)] * 100)));
+}
+
+// ---------------------------------------------------------------- Gráficos de las pestañas Figuras y Datos
+const textoNivel = (v, n) => v === 'Dependency risk' && n !== 'Sin registro' ? n.split(/\s*=/)[0]
+                           : v === TIPO && n === SIN_INCONTINENCIA ? 'Sin incontinencia' : nivelTexto(n);
+// Nombre corto de un servicio para los rótulos de los gráficos ("Unidad de Cirugía adulto" -> "Cirugía adulto")
+const corto = n => { const t = n.replace(/^Unidad (de )?/, ''); return t.charAt(0).toUpperCase() + t.slice(1); };
+// Rótulo compacto de una columna del modelo (gráfico de importancia)
+function textoColumna(col) {
+  const c = M.vector[M.columnas.indexOf(col)];
+  if (c.nivel === undefined) return ETIQUETAS[c.var];
+  if (c.var === 'Service') return corto(c.nivel);
+  if (c.var === 'Dependency risk') return 'CUDYR ' + textoNivel(c.var, c.nivel);
+  if (c.var === TIPO) return c.nivel === SIN_INCONTINENCIA ? 'Sin incontinencia' : 'Incontinencia ' + c.nivel.toLowerCase();
+  return ETIQUETAS[c.var] + ': ' + textoNivel(c.var, c.nivel);
+}
+const recortar = (texto, px) => texto.length * 6.3 <= px ? texto : texto.slice(0, Math.max(1, Math.floor(px / 6.3) - 1)) + '…';
+function tooltipEn(el, filas) {
+  el.addEventListener('pointermove', ev => mostrarTooltip(ev, filas));
+  el.addEventListener('pointerleave', ocultarTooltip);
+}
+
+// Barras con el extremo de datos redondeado y la base recta
+function barraH(g, x, y, w, alto, relleno) {
+  const r = Math.max(0, Math.min(4, w, alto / 2));
+  return s('path', {d: `M${x},${y}h${w - r}a${r},${r} 0 0 1 ${r},${r}v${alto - 2 * r}a${r},${r} 0 0 1 ${-r},${r}h${-(w - r)}Z`, fill: relleno}, g);
+}
+function barraV(g, x, base, w, alto, relleno) {
+  const r = Math.max(0, Math.min(4, w / 2, alto));
+  return s('path', {d: `M${x},${base}v${-(alto - r)}a${r},${r} 0 0 1 ${r},${-r}h${w - 2 * r}a${r},${r} 0 0 1 ${r},${r}v${alto - r}Z`, fill: relleno}, g);
+}
+
+// filas: [{etiqueta, valores: [uno por serie], detalle: filas del tooltip}]
+function barrasHorizontales(svg, filas, series, op) {
+  const W = anchoSVG(svg, 500), et = Math.min(230, W * 0.42);
+  const agrupado = series.length > 1 && !op.apilado;
+  const grosor = agrupado ? 9 : 14, fila = agrupado ? 2 * grosor + 10 : 22;
+  const m = {l: et + 8, r: 48, t: op.referencia != null ? 18 : 4, b: 20}, ancho = W - m.l - m.r;
+  const H = m.t + filas.length * fila + m.b;
+  const x = v => m.l + Math.min(v, op.maximo) / op.maximo * ancho;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.replaceChildren();
+  for (const v of op.marcas || [0, .25, .5, .75, 1].map(t => t * op.maximo)) {
+    s('line', {class: 'grid', x1: x(v), x2: x(v), y1: m.t, y2: H - m.b}, svg);
+    s('text', {x: x(v), y: H - 5, 'text-anchor': v === 0 ? 'start' : 'middle'}, svg).textContent = op.formatoEje(v);
+  }
+  filas.forEach((f, k) => {
+    const y0 = m.t + k * fila;
+    s('text', {class: 'rotulo-fila', x: m.l - 8, y: y0 + fila / 2 + 4, 'text-anchor': 'end'}, svg).textContent = recortar(f.etiqueta, et);
+    if (agrupado) {
+      f.valores.forEach((v, j) => barraH(svg, m.l, y0 + 4 + j * (grosor + 2), x(v) - m.l, grosor, series[j].color));
+    } else {
+      let acumulado = 0;
+      f.valores.forEach((v, j) => {
+        const desde = x(acumulado);
+        acumulado += v;
+        const largo = x(acumulado) - desde;
+        if (j < f.valores.length - 1) s('rect', {x: desde, y: y0 + (fila - grosor) / 2, width: Math.max(0, largo - 2), height: grosor, fill: series[j].color}, svg);
+        else barraH(svg, desde, y0 + (fila - grosor) / 2, largo, grosor, series[j].color);
+      });
+      if (op.rotulo) s('text', {class: 'rotulo-dato', x: x(acumulado) + 6, y: y0 + fila / 2 + 4}, svg).textContent = op.rotulo(f);
+    }
+    tooltipEn(s('rect', {x: 0, y: y0, width: W, height: fila, fill: 'transparent'}, svg), f.detalle);
+  });
+  if (op.referencia != null) {
+    s('line', {x1: x(op.referencia), x2: x(op.referencia), y1: m.t - 4, y2: H - m.b, stroke: color('--critical'), 'stroke-width': 1.5}, svg);
+    s('text', {class: 'rotulo-dato', x: x(op.referencia), y: 11, 'text-anchor': 'middle'}, svg).textContent = op.textoReferencia;
+  }
+}
+
+// grupos: [{etiqueta, caja: {n, q1, med, q3, lo, hi, atipicos}}]; cajas verticales u horizontales
+function cajas(svg, grupos, op) {
+  const hz = !!op.horizontal, W = anchoSVG(svg, 500), et = hz ? Math.min(220, W * 0.4) : 0;
+  const m = hz ? {l: et + 8, r: 16, t: 18, b: 22} : {l: 40, r: 12, t: 18, b: 30};
+  const H = hz ? m.t + grupos.length * 28 + m.b : 300;
+  const [vmin, vmax] = op.rango;
+  const largo = hz ? W - m.l - m.r : H - m.t - m.b;
+  const banda = hz ? 28 : (W - m.l - m.r) / grupos.length;
+  const pv = v => hz ? m.l + (v - vmin) / (vmax - vmin) * largo : m.t + (1 - (v - vmin) / (vmax - vmin)) * largo;
+  const pc = k => (hz ? m.t : m.l) + banda * (k + .5);
+  const P = (v, c) => hz ? [pv(v), c] : [c, pv(v)];
+  const linea = (v1, c1, v2, c2, attrs) => {
+    const [x1, y1] = P(v1, c1), [x2, y2] = P(v2, c2);
+    return s('line', {x1, y1, x2, y2, ...attrs}, svg);
+  };
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.replaceChildren();
+  for (const t of op.marcas) {
+    if (hz) {
+      s('line', {class: 'grid', x1: pv(t), x2: pv(t), y1: m.t, y2: H - m.b}, svg);
+      s('text', {x: pv(t), y: H - 5, 'text-anchor': 'middle'}, svg).textContent = op.formato(t);
+    } else {
+      s('line', {class: 'grid', x1: m.l, x2: W - m.r, y1: pv(t), y2: pv(t)}, svg);
+      s('text', {x: m.l - 6, y: pv(t) + 4, 'text-anchor': 'end'}, svg).textContent = op.formato(t);
+    }
+  }
+  const media = Math.min(14, banda * .3);
+  const tinta = {stroke: color('--ink-2'), 'stroke-width': 1};
+  grupos.forEach((g, k) => {
+    const c = pc(k), b = g.caja;
+    if (hz) s('text', {class: 'rotulo-fila', x: m.l - 8, y: c + 4, 'text-anchor': 'end'}, svg).textContent = recortar(g.etiqueta, et);
+    else s('text', {class: 'rotulo-fila', x: c, y: H - m.b + 18, 'text-anchor': 'middle'}, svg).textContent = recortar(g.etiqueta, banda - 4);
+    linea(b.lo, c, b.q1, c, tinta);
+    linea(b.q3, c, b.hi, c, tinta);
+    linea(b.lo, c - media / 2, b.lo, c + media / 2, tinta);
+    linea(b.hi, c - media / 2, b.hi, c + media / 2, tinta);
+    const [xa, ya] = P(b.q1, c - media), [xb, yb] = P(b.q3, c + media);
+    s('rect', {x: Math.min(xa, xb), y: Math.min(ya, yb), width: Math.abs(xb - xa), height: Math.abs(yb - ya), rx: 3,
+               fill: color('--s1'), 'fill-opacity': .22, stroke: color('--s1'), 'stroke-width': 1.5}, svg);
+    linea(b.med, c - media, b.med, c + media, {stroke: color('--ink'), 'stroke-width': 2});
+    for (const a of b.atipicos) {
+      const [xo, yo] = P(a, c);
+      s('circle', {cx: xo, cy: yo, r: 3, fill: 'none', stroke: color('--muted'), 'stroke-width': 1}, svg);
+    }
+    const [hx, hy] = hz ? [0, c - banda / 2] : [c - banda / 2, m.t];
+    tooltipEn(s('rect', {x: hx, y: hy, width: hz ? W : banda, height: hz ? banda : H - m.t - m.b, fill: 'transparent'}, svg),
+              [{valor: g.etiqueta, rotulo: ''}, {valor: op.formato(b.med, 1), rotulo: 'mediana'},
+               {valor: op.formato(b.q1, 1) + ' – ' + op.formato(b.q3, 1), rotulo: 'Q1–Q3'}, {valor: String(b.n), rotulo: 'pacientes'}]);
+  });
+  if (op.promedio != null) {
+    linea(op.promedio, hz ? m.t - 4 : m.l, op.promedio, hz ? H - m.b : W - m.r, {stroke: color('--critical'), 'stroke-width': 1.5});
+    const [xt, yt] = hz ? [pv(op.promedio), 11] : [W - m.r, pv(op.promedio) - 6];
+    s('text', {class: 'rotulo-dato', x: xt, y: yt, 'text-anchor': hz ? 'middle' : 'end'}, svg).textContent = 'Riesgo promedio ' + op.formato(op.promedio);
+  }
+}
+
+function histograma(svg, bins, series) {
+  const W = anchoSVG(svg, 500), H = 300, m = {l: 40, r: 8, t: 10, b: 30}, ancho = W - m.l - m.r, alto = H - m.t - m.b;
+  const maximo = Math.max(.05, Math.ceil(Math.max(...bins.flatMap(b => b.valores)) * 20) / 20);
+  const y = v => m.t + (1 - v / maximo) * alto;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.replaceChildren();
+  const pasoEje = maximo <= .2 ? .05 : maximo <= .5 ? .1 : .25;
+  for (let t = 0; t <= maximo + 1e-9; t += pasoEje) {
+    s('line', {class: 'grid', x1: m.l, x2: W - m.r, y1: y(t), y2: y(t)}, svg);
+    s('text', {x: m.l - 6, y: y(t) + 4, 'text-anchor': 'end'}, svg).textContent = pct(t);
+  }
+  const banda = ancho / bins.length, grosor = Math.max(2, Math.min(24, (banda - 4) / series.length - 2));
+  const salto = Math.ceil(bins.length * 30 / ancho);
+  bins.forEach((b, k) => {
+    const x0 = m.l + banda * k + (banda - (grosor + 2) * series.length + 2) / 2;
+    b.valores.forEach((v, j) => barraV(svg, x0 + j * (grosor + 2), m.t + alto, grosor, v / maximo * alto, series[j].color));
+    if (k % salto === 0) s('text', {x: m.l + banda * (k + .5), y: H - 10, 'text-anchor': 'middle'}, svg).textContent = b.etiqueta;
+    tooltipEn(s('rect', {x: m.l + banda * k, y: m.t, width: banda, height: alto, fill: 'transparent'}, svg), b.detalle);
+  });
+  s('line', {class: 'eje', x1: m.l, x2: W - m.r, y1: m.t + alto, y2: m.t + alto}, svg);
+}
+
+function actualizarFiguras() {
+  const F = M.figuras, porcentaje = (v, d = 0) => pct(v, d);
+
+  // Importancia de las variables del modelo elegido: las 15 más importantes, de mayor a menor
+  const modelo = estado.importancia, imp = F.importancia;
+  const top = imp.columnas.map((col, i) => ({col, valor: imp[modelo][i]})).sort((a, b) => b.valor - a.valor).slice(0, 15);
+  const maxImp = Math.ceil(top[0].valor * 20) / 20;
+  barrasHorizontales(document.getElementById('fig-importancia'),
+    top.map(r => ({etiqueta: textoColumna(r.col), valores: [r.valor],
+      detalle: [{valor: textoColumna(r.col), rotulo: ''}, {valor: dec(r.valor, 3), rotulo: 'importancia'}]})),
+    [{color: color(modelo === 'RF' ? '--s2' : '--s1')}],
+    {maximo: maxImp, marcas: Array.from({length: Math.round(maxImp / .05) + 1}, (_, i) => i * .05),
+     formatoEje: v => dec(v, 2), rotulo: f => dec(f.valores[0], 3)});
+
+  // Riesgo predicho fuera de muestra por el RF
+  const opRiesgo = {rango: [0, 1], marcas: [0, .25, .5, .75, 1], formato: porcentaje, promedio: F.riesgo_promedio};
+  cajas(document.getElementById('fig-incontinencia'), ['Mixta', SIN_INCONTINENCIA, 'Urinaria', 'Fecal'].map(n =>
+    ({etiqueta: textoNivel(TIPO, n), caja: F.riesgo_incontinencia[n]})), opRiesgo);
+  cajas(document.getElementById('fig-servicio'), Object.entries(F.riesgo_servicio).sort((a, b) => b[1].med - a[1].med).map(([n, c]) =>
+    ({etiqueta: corto(n), caja: c})), {...opRiesgo, horizontal: true});
+}
+
+// Factores binarios del modelo (Sí / No)
+const FACTORES = ['Restraint', 'Pre-hospital LPP', 'Skin lesions', 'Mattres', 'Incontinence', 'Invasive devices', 'Position'];
+
+function crearSelectorImportancia() {
+  const botones = document.querySelectorAll('#modelo-importancia button');
+  botones.forEach(b => b.addEventListener('click', () => {
+    estado.importancia = b.dataset.m;
+    botones.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    actualizarFiguras();
+  }));
+}
+
+// Distribución de una variable numérica dentro de cada grupo (con y sin LPP)
+function distribucion(svg, v) {
+  const d = M.datos[v], sumar = a => a.reduce((x, y) => x + y, 0);
+  const totCon = sumar(d.con) + d.con_mas, totSin = sumar(d.sin) + d.sin_mas;
+  const paso = d.bordes[1] - d.bordes[0];
+  const bins = d.con.map((c, k) => ({etiqueta: String(d.bordes[k]), con: c, sin: d.sin[k],
+    rango: paso === 1 ? String(d.bordes[k]) : `${d.bordes[k]}–${d.bordes[k + 1]}`}));
+  if (d.con_mas + d.sin_mas > 0) bins.push({etiqueta: '>' + d.bordes.at(-1), con: d.con_mas, sin: d.sin_mas, rango: 'más de ' + d.bordes.at(-1)});
+  histograma(svg, bins.map(b => ({etiqueta: b.etiqueta, valores: [b.sin / totSin, b.con / totCon],
+      detalle: [{valor: b.rango, rotulo: ETIQUETAS[v].toLowerCase()},
+                {valor: `${pct(b.sin / totSin, 1)} (${b.sin})`, rotulo: 'sin LPP', color: color('--s1')},
+                {valor: `${pct(b.con / totCon, 1)} (${b.con})`, rotulo: 'con LPP', color: color('--s2')}]})),
+    [{color: color('--s1')}, {color: color('--s2')}]);
+}
+
+// Marcas del eje cada 10 % (o 20 % si el máximo pasa de 60 %)
+const marcasPct = maximo => { const paso = maximo > .6 ? .2 : .1; return Array.from({length: Math.floor(maximo / paso + 1e-9) + 1}, (_, i) => i * paso); };
+
+// % de pacientes con LPP en cada categoría de una variable (sin la categoría "Sin registro")
+function tasaPorNivel(svg, v, ordenar) {
+  const d = M.datos[v], prevalencia = M.eventos / M.n;
+  let filas = d.niveles.map((n, i) => ({etiqueta: textoNivel(v, n), nivel: n, con: d.con[i], tot: d.con[i] + d.sin[i]}))
+    .filter(f => f.nivel !== 'Sin registro');
+  if (ordenar) filas = filas.sort((a, b) => b.con / b.tot - a.con / a.tot);
+  const maximo = Math.max(.5, Math.ceil(Math.max(...filas.map(f => f.con / f.tot)) * 10) / 10);
+  barrasHorizontales(svg, filas.map(f => ({...f, valores: [f.con / f.tot],
+      detalle: [{valor: f.etiqueta, rotulo: ''}, {valor: pct(f.con / f.tot, 1), rotulo: 'con LPP'}, {valor: `${f.con} de ${f.tot}`, rotulo: 'pacientes'}]})),
+    [{color: color('--s2')}],
+    {maximo, marcas: marcasPct(maximo), formatoEje: t => pct(t), rotulo: f => `${f.con} de ${f.tot}`,
+     referencia: prevalencia, textoReferencia: 'Promedio ' + pct(prevalencia, 1)});
+}
+
+function actualizarDatos() {
+  const D = M.datos, prevalencia = M.eventos / M.n;
+  const kpis = [['Pacientes', String(M.n)], ['Con LPP', String(M.eventos)], ['Prevalencia', pct(prevalencia, 1)], ['Servicios', String(D.Service.niveles.length)]];
+  document.getElementById('kpis-datos').replaceChildren(...kpis.map(([t, v]) =>
+    h('div', {class: 'tarjeta kpi'}, h('div', {class: 'rotulo'}, t), h('div', {class: 'valor'}, v))));
+
+  // Pacientes por servicio: con y sin LPP
+  const servicios = D.Service.niveles.map((n, i) => ({etiqueta: corto(n), con: D.Service.con[i], tot: D.Service.con[i] + D.Service.sin[i]}))
+    .sort((a, b) => b.tot - a.tot);
+  barrasHorizontales(document.getElementById('datos-servicio'),
+    servicios.map(f => ({...f, valores: [f.con, f.tot - f.con],
+      detalle: [{valor: f.etiqueta, rotulo: ''}, {valor: String(f.tot), rotulo: 'pacientes'},
+                {valor: `${f.con} (${pct(f.con / f.tot, 1)})`, rotulo: 'con LPP', color: color('--s2')}]})),
+    [{color: color('--s2')}, {color: color('--pista')}],
+    {apilado: true, maximo: Math.ceil(servicios[0].tot / 50) * 50, formatoEje: v => String(Math.round(v)), rotulo: f => String(f.tot)});
+
+  // Factores clínicos: % con LPP cuando el factor está presente y cuando no
+  const factores = FACTORES.map(v => {
+    const d = D[v], i = d.niveles.findIndex(n => /^s[ií]$/i.test(n)), j = d.niveles.findIndex(n => /^no$/i.test(n));
+    const si = {con: d.con[i], tot: d.con[i] + d.sin[i]}, no = {con: d.con[j], tot: d.con[j] + d.sin[j]};
+    return {etiqueta: ETIQUETAS[v], valores: [si.con / si.tot, no.con / no.tot],
+            detalle: [{valor: ETIQUETAS[v], rotulo: ''},
+                      {valor: `${pct(si.con / si.tot, 1)} (${si.con} de ${si.tot})`, rotulo: 'sí', color: color('--s2')},
+                      {valor: `${pct(no.con / no.tot, 1)} (${no.con} de ${no.tot})`, rotulo: 'no', color: color('--s1')}]};
+  }).sort((a, b) => b.valores[0] - a.valores[0]);
+  const maxFactor = Math.ceil(Math.max(...factores.map(f => f.valores[0])) * 10) / 10;
+  barrasHorizontales(document.getElementById('datos-factores'), factores, [{color: color('--s2')}, {color: color('--s1')}],
+    {maximo: maxFactor, marcas: marcasPct(maxFactor), formatoEje: t => pct(t),
+     referencia: prevalencia, textoReferencia: 'Promedio ' + pct(prevalencia, 1)});
+
+  distribucion(document.getElementById('datos-braden'), 'Total Braden');
+  distribucion(document.getElementById('datos-edad'), 'Age');
+  tasaPorNivel(document.getElementById('datos-cudyr'), 'Dependency risk', false);
+  tasaPorNivel(document.getElementById('datos-incontinencia'), TIPO, true);
+}
+
+// ---------------------------------------------------------------- Controles
+function crearSelector() {
+  const cont = document.getElementById('selector-modelo');
+  if (ORDEN.length === 1) {
+    document.getElementById('titulo-modelos').hidden = true;
+    cont.replaceWith(h('span', {class: 'modelo-unico'}, NOMBRES[ORDEN[0]] + ' · AUC ' + dec(M.desempeno[ORDEN[0]].auc, 2)));
+    return;
+  }
+  for (const n of ORDEN) {
+    const b = h('button', {type: 'button', title: NOMBRES[n], 'data-m': n, 'aria-pressed': String(n === estado.modelo)},
+                n, h('small', {}, 'AUC ' + dec(M.desempeno[n].auc, 2)));
+    b.addEventListener('click', () => elegirModelo(n));
+    cont.append(b);
+  }
+}
+function elegirModelo(n) {
+  estado.modelo = n;
+  document.querySelectorAll('#selector-modelo button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === n)));
+  actualizar();
+}
+// El control del umbral aparece bajo el riesgo del paciente y en Desempeño; ambos quedan sincronizados
+function crearControlesUmbral() {
+  document.querySelectorAll('[data-umbral]').forEach((cont, k) => {
+    const id = 'umbral-' + k;
+    const rango = h('input', {type: 'range', id, min: '1', max: '99', step: '1', value: String(estado.umbral)});
+    const boton = h('button', {type: 'button', class: 'boton', title: 'Umbral del paper'}, UMBRAL_PAPER + '%');
+    rango.addEventListener('input', () => fijarUmbral(Number(rango.value)));
+    boton.addEventListener('click', () => fijarUmbral(UMBRAL_PAPER));
+    cont.append(h('label', {class: 'rotulo', for: id}, 'Umbral de alerta'), rango, h('output', {for: id}), boton);
+  });
+}
+function fijarUmbral(v) {
+  estado.umbral = Math.max(1, Math.min(99, v));
+  document.querySelectorAll('[data-umbral] input').forEach(r => { r.value = estado.umbral; });
+  actualizar();
+}
+
+function actualizar() {
+  document.querySelectorAll('[data-umbral] output').forEach(o => { o.textContent = estado.umbral + ' %'; });
+  document.querySelectorAll('[data-umbral] .boton').forEach(b => b.setAttribute('aria-pressed', String(estado.umbral === UMBRAL_PAPER)));
+  actualizarPaciente();
+  actualizarDesempeno();
+  if (document.getElementById('p-figuras').offsetParent) actualizarFiguras();
+  if (document.getElementById('p-datos').offsetParent) actualizarDatos();
+}
+
+document.getElementById('sub').replaceChildren(
+  ...['Dataset del Hospital Clínico Félix Bulnes, 2022', `${M.n} pacientes`, `${M.eventos} con LPP`].map(t => h('span', {}, t)));
+// Navegación: la página abre en la predicción; los detalles se abren con #datos, #desempeno o #resultados
+function navegar() {
+  const panel = {'#datos': 'p-datos', '#desempeno': 'p-desempeno', '#resultados': 'p-figuras'}[location.hash];
+  document.getElementById('vista-prediccion').hidden = !!panel;
+  document.getElementById('vista-detalles').hidden = !panel;
+  document.getElementById('ir-detalles').hidden = !!panel;
+  document.getElementById('volver').hidden = !panel;
+  document.querySelectorAll('#vista-detalles .panel').forEach(p => { p.hidden = p.id !== panel; });
+  document.querySelectorAll('.pestanas a').forEach(a => a.setAttribute('aria-selected', String(a.getAttribute('href') === location.hash)));
+  window.scrollTo(0, 0);
+  actualizar();
+}
+addEventListener('hashchange', navegar);
+let redibujo;
+addEventListener('resize', () => { clearTimeout(redibujo); redibujo = setTimeout(actualizar, 120); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', actualizar);
+
+crearSelector();
+crearControlesUmbral();
+crearSelectorImportancia();
+crearFormulario();
+opcionesBraden();
+sincronizarIncontinencia();
+navegar();
+</script>
+</body>
+</html>
